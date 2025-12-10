@@ -102,3 +102,7 @@ lint/tmp/
 
 ### Kotlin ###
 .kotlin/
+
+keystore.properties
+app/release/
+*.patch

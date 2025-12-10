@@ -1,3 +1,17 @@
+import java.io.FileInputStream
+import java.util.Properties
+
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+
+if (keystorePropertiesFile.exists()) {
+    FileInputStream(keystorePropertiesFile).use {
+        keystoreProperties.load(it)
+    }
+} else {
+    println("WARNING: keystore.properties file not found. Release signing config will be incomplete.")
+}
+
 plugins {
     id("org.fcitx.fcitx5.android.app-convention")
     id("org.fcitx.fcitx5.android.native-app-convention")
@@ -10,10 +24,19 @@ plugins {
 }
 
 android {
+    signingConfigs {
+        create("release") {
+            storeFile = keystoreProperties.getProperty("STORE_FILE")?.let { file(it) }
+            storePassword = keystoreProperties.getProperty("STORE_PASSWORD")
+            keyAlias = keystoreProperties.getProperty("KEY_ALIAS")
+            keyPassword = keystoreProperties.getProperty("KEY_PASSWORD")
+        }
+    }
+
     namespace = "org.fcitx.fcitx5.android"
 
     defaultConfig {
-        applicationId = "org.fcitx.fcitx5.android"
+        applicationId = "org.fcitx5.android.sup3r"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         @Suppress("UnstableApiUsage")
