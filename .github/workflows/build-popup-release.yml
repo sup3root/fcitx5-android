@@ -1,0 +1,118 @@
+name: Build popup Release APK
+
+on:
+  push:
+    branches:
+      - popup
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Fetch git tags
+        run: |
+          git fetch --force --tags
+          git tag -l | tail
+          git describe --tags --long --always
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Android
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y extra-cmake-modules gettext
+          sdkmanager --install "cmake;3.31.6"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Restore release keystore
+        shell: bash
+        env:
+          FCITX5_KEYSTORE_BASE64: ${{ secrets.FCITX5_KEYSTORE_BASE64 }}
+        run: |
+          : "${FCITX5_KEYSTORE_BASE64:?Missing FCITX5_KEYSTORE_BASE64 secret}"
+          install -d "$RUNNER_TEMP/signing"
+          printf '%s' "$FCITX5_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/signing/fcitx5-release.keystore"
+          test -s "$RUNNER_TEMP/signing/fcitx5-release.keystore"
+          echo "KEYSTORE_FILE=$RUNNER_TEMP/signing/fcitx5-release.keystore" >> "$GITHUB_ENV"
+
+      - name: Build Release APK
+        run: |
+          ./gradlew :app:assembleRelease
+          ./gradlew :assembleReleasePlugins
+
+      - name: Sign Release APKs
+        shell: bash
+        env:
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          : "${KEYSTORE_FILE:?Missing KEYSTORE_FILE}"
+          : "${STORE_PASSWORD:?Missing STORE_PASSWORD secret}"
+          : "${KEY_ALIAS:?Missing KEY_ALIAS secret}"
+          : "${KEY_PASSWORD:?Missing KEY_PASSWORD secret}"
+
+          build_tools="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
+          zipalign="$build_tools/zipalign"
+          apksigner="$build_tools/apksigner"
+          test -x "$zipalign"
+          test -x "$apksigner"
+
+          mapfile -d '' unsigned_apks < <(find app plugin -type f -path '*/build/outputs/apk/release/*-unsigned.apk' -print0)
+          if (( ${#unsigned_apks[@]} == 0 )); then
+            echo "No unsigned release APKs found."
+            exit 0
+          fi
+
+          for unsigned_apk in "${unsigned_apks[@]}"; do
+            aligned_apk="${unsigned_apk%.apk}-aligned.apk"
+            signed_apk="${unsigned_apk%-unsigned.apk}.apk"
+
+            "$zipalign" -f -p 4 "$unsigned_apk" "$aligned_apk"
+            "$apksigner" sign \
+              --ks "$KEYSTORE_FILE" \
+              --ks-pass env:STORE_PASSWORD \
+              --ks-key-alias "$KEY_ALIAS" \
+              --key-pass env:KEY_PASSWORD \
+              --out "$signed_apk" \
+              "$aligned_apk"
+            "$apksigner" verify --verbose "$signed_apk"
+
+            rm -f "$unsigned_apk" "$aligned_apk"
+          done
+
+      - name: Upload APKs to GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="$(git describe --tags --long --always)"
+          tag="popup-${version}"
+
+          gh release create "$tag" \
+            app/build/outputs/apk/release/*.apk \
+            plugin/*/build/outputs/apk/release/*.apk \
+            --title "$tag" \
+            --notes "Auto build from popup branch" \
+            --latest=false
+            
