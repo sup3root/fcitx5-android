@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - popup
+    tags:
+      - "*"
+
   workflow_dispatch:
 
 permissions:
@@ -21,10 +24,48 @@ jobs:
           submodules: recursive
 
       - name: Fetch git tags
+        shell: bash
         run: |
-          git fetch --force --tags
-          git tag -l | tail
+          git remote -v
+
+          # 拉取 fork/origin 的完整分支和 tag
+          git fetch --force --prune origin \
+            '+refs/heads/*:refs/remotes/origin/*' \
+            '+refs/tags/*:refs/tags/*'
+
+          # 拉取上游官方 tag，避免 fork 里缺少官方版本 tag 时 git describe 只得到 commit id
+          git remote add upstream https://github.com/fcitx5-android/fcitx5-android.git || true
+          git fetch --force --prune upstream \
+            '+refs/tags/*:refs/tags/*'
+
+          echo "Current commit:"
+          git rev-parse HEAD
+
+          echo "Recent tags:"
+          git tag --sort=-v:refname | head -n 20
+
+          echo "Merged version tags:"
+          git tag --merged HEAD --sort=-v:refname \
+            | grep -E '^(v)?[0-9]+(\.[0-9]+){1,3}$' \
+            | head -n 20 || true
+
+          echo "git describe:"
           git describe --tags --long --always
+
+      - name: Set build version
+        shell: bash
+        run: |
+          VERSION="$(git describe --tags --long --always)"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "VERSION=$VERSION"
+
+          if [[ ! "$VERSION" =~ ^(v)?[0-9]+\.[0-9]+(\.[0-9]+){0,2}-[0-9]+-g[0-9a-f]+$ ]] \
+            && [[ ! "$VERSION" =~ ^popup-.*-[0-9]+-g[0-9a-f]+$ ]]; then
+            echo "Invalid version from git describe: $VERSION"
+            echo "Expected something like: 0.1.2-82-gcb86e97e"
+            echo "Or popup-0.1.2-82-gcb86e97e-0-gcb86e97e on tag builds"
+            exit 1
+          fi
 
       - name: Setup Java
         uses: actions/setup-java@v5
@@ -50,14 +91,24 @@ jobs:
           FCITX5_KEYSTORE_BASE64: ${{ secrets.FCITX5_KEYSTORE_BASE64 }}
         run: |
           : "${FCITX5_KEYSTORE_BASE64:?Missing FCITX5_KEYSTORE_BASE64 secret}"
+
           install -d "$RUNNER_TEMP/signing"
-          printf '%s' "$FCITX5_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/signing/fcitx5-release.keystore"
+
+          printf '%s' "$FCITX5_KEYSTORE_BASE64" \
+            | base64 --decode \
+            > "$RUNNER_TEMP/signing/fcitx5-release.keystore"
+
           test -s "$RUNNER_TEMP/signing/fcitx5-release.keystore"
+
           echo "KEYSTORE_FILE=$RUNNER_TEMP/signing/fcitx5-release.keystore" >> "$GITHUB_ENV"
 
-      - name: Build Release APK
+      - name: Build app release APK
         run: |
           ./gradlew :app:assembleRelease
+
+      - name: Build plugin release APKs
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
           ./gradlew :assembleReleasePlugins
 
       - name: Sign Release APKs
@@ -75,20 +126,36 @@ jobs:
           build_tools="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
           zipalign="$build_tools/zipalign"
           apksigner="$build_tools/apksigner"
+
           test -x "$zipalign"
           test -x "$apksigner"
 
-          mapfile -d '' unsigned_apks < <(find app plugin -type f -path '*/build/outputs/apk/release/*-unsigned.apk' -print0)
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            search_dirs=(app plugin)
+          else
+            search_dirs=(app)
+          fi
+
+          mapfile -d '' unsigned_apks < <(
+            find "${search_dirs[@]}" \
+              -type f \
+              -path '*/build/outputs/apk/release/*-unsigned.apk' \
+              -print0
+          )
+
           if (( ${#unsigned_apks[@]} == 0 )); then
             echo "No unsigned release APKs found."
-            exit 0
+            exit 1
           fi
 
           for unsigned_apk in "${unsigned_apks[@]}"; do
             aligned_apk="${unsigned_apk%.apk}-aligned.apk"
             signed_apk="${unsigned_apk%-unsigned.apk}.apk"
 
+            echo "Signing $unsigned_apk"
+
             "$zipalign" -f -p 4 "$unsigned_apk" "$aligned_apk"
+
             "$apksigner" sign \
               --ks "$KEYSTORE_FILE" \
               --ks-pass env:STORE_PASSWORD \
@@ -96,23 +163,82 @@ jobs:
               --key-pass env:KEY_PASSWORD \
               --out "$signed_apk" \
               "$aligned_apk"
+
             "$apksigner" verify --verbose "$signed_apk"
 
             rm -f "$unsigned_apk" "$aligned_apk"
           done
 
+      - name: Prepare app APK artifact
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        shell: bash
+        run: |
+          mkdir -p app-apks
+
+          mapfile -d '' app_apks < <(
+            find app \
+              -type f \
+              -path '*/build/outputs/apk/release/*.apk' \
+              ! -name '*-unsigned.apk' \
+              ! -name '*-aligned.apk' \
+              -print0
+          )
+
+          if (( ${#app_apks[@]} == 0 )); then
+            echo "No signed app APKs found."
+            exit 1
+          fi
+
+          for apk in "${app_apks[@]}"; do
+            cp "$apk" "app-apks/$(basename "$apk")"
+          done
+
+          echo "App APKs:"
+          ls -lh app-apks
+
+      - name: Upload app APK artifact
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.VERSION }}-app-apk
+          path: app-apks/*.apk
+
+      - name: Prepare release APKs
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: |
+          mkdir -p release-apks
+
+          mapfile -d '' release_apks < <(
+            find app plugin \
+              -type f \
+              -path '*/build/outputs/apk/release/*.apk' \
+              ! -name '*-unsigned.apk' \
+              ! -name '*-aligned.apk' \
+              -print0
+          )
+
+          if (( ${#release_apks[@]} == 0 )); then
+            echo "No signed release APKs found."
+            exit 1
+          fi
+
+          for apk in "${release_apks[@]}"; do
+            cp "$apk" "release-apks/$(basename "$apk")"
+          done
+
+          echo "Release APKs:"
+          ls -lh release-apks
+
       - name: Upload APKs to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          version="$(git describe --tags --long --always)"
-          tag="popup-${version}"
-
-          gh release create "$tag" \
-            app/build/outputs/apk/release/*.apk \
-            plugin/*/build/outputs/apk/release/*.apk \
-            --title "$tag" \
-            --notes "Auto build from popup branch" \
+          gh release create "${GITHUB_REF_NAME}" \
+            release-apks/*.apk \
+            --repo "sup3root/fcitx5-android" \
+            --title "${VERSION}-release" \
+            --notes "Auto build from ${GITHUB_REF_NAME}" \
             --latest=false
-            
