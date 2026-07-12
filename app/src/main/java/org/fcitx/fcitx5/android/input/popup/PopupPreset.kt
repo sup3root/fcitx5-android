@@ -1,6 +1,6 @@
 /*
  * SPDX-License-Identifier: LGPL-2.1-or-later
- * SPDX-FileCopyrightText: Copyright 2021-2023 Fcitx5 for Android Contributors
+ * SPDX-FileCopyrightText: Copyright 2021-2026 Fcitx5 for Android Contributors
  */
 package org.fcitx.fcitx5.android.input.popup
 
@@ -22,7 +22,7 @@ val PopupPreset: Map<String, Array<String>> = hashMapOf(
     "i" to arrayOf("8", "*", "î", "ï", "ī", "í", "ǐ", "ì", "į", "ı"),
     "o" to arrayOf("9", "(", "ô", "ö", "ō", "ó", "ǒ", "ò", "œ", "ø", "õ"),
     "p" to arrayOf("0", ")"),
-    "a" to arrayOf("@", "â", "ä", "ā", "á", "ǎ", "à", "æ", "ã", "å"),
+    "a" to arrayOf("@", "â", "ä", "ā", "á", "ǎ", "à", "æ", "ã", "å", "ą"), 
     "s" to arrayOf("*", "ß", "ś", "š", "ş"),
     "d" to arrayOf("+", "ð"),
     "f" to arrayOf("-", "_", "←", "↑", "→", "↓"),
@@ -43,15 +43,15 @@ val PopupPreset: Map<String, Array<String>> = hashMapOf(
     //
     "Q" to arrayOf("1", "!"),
     "W" to arrayOf("2", "@"),
-    "E" to arrayOf("3", "#", "Ê", "Ë", "Ē", "É", "È", "Ė", "Ę", "Ȩ", "Ḝ", "Ə"),
+    "E" to arrayOf("3", "#", "Ê", "Ë", "Ē", "É", "Ě", "È", "Ė", "Ę", "Ȩ", "Ḝ", "Ə"),
     "R" to arrayOf("4", "$"),
     "T" to arrayOf("5", "%"),
     "Y" to arrayOf("6", "^", "Ÿ", "Ұ", "Ү", "Ӯ", "Ў"),
-    "U" to arrayOf("7", "&", "Û", "Ü", "Ù", "Ú", "Ū"),
-    "I" to arrayOf("8", "*", "Î", "Ï", "Í", "Ī", "Į", "Ì"),
-    "O" to arrayOf("9", "(", "Ô", "Ö", "Ò", "Ó", "Œ", "Ø", "Ō", "Õ"),
+    "U" to arrayOf("7", "&", "Û", "Ü", "Ū", "Ú", "Ǔ", "Ù"),
+    "I" to arrayOf("8", "*", "Î", "Ï", "Ī", "Í", "Ǐ", "Ì", "Į", "ı"),
+    "O" to arrayOf("9", "(", "Ô", "Ö", "Ō", "Ó", "Ǒ", "Ò", "Œ", "Ø", "Õ"),
     "P" to arrayOf("0", ")"),
-    "A" to arrayOf("@", "Â", "Ä", "Ā", "Á", "À", "Æ", "Ã", "Å"),
+    "A" to arrayOf("@", "Â", "Ä", "Ā", "Á", "Ǎ", "À", "Æ", "Ã", "Å", "Ą"),
     "S" to arrayOf("*", "ẞ", "Ś", "Š", "Ş"),
     "D" to arrayOf("+", "Ð"),
     "F" to arrayOf("-", "_", "←", "↑", "→", "↓"),
@@ -63,7 +63,7 @@ val PopupPreset: Map<String, Array<String>> = hashMapOf(
     "Z" to arrayOf("'", "`", "Ž", "Ź", "Ż"),
     "X" to arrayOf(":", ";", "×"),
     "C" to arrayOf("\"", "Ç", "Ć", "Č"),
-    "V" to arrayOf("?", "¿", "ü", "ǖ", "ǘ", "ǚ", "ǜ"),
+    "V" to arrayOf("?", "¿", "Ü", "Ǖ", "Ǘ", "Ǚ", "Ǜ"),
     "B" to arrayOf("!", "¡"),
     "N" to arrayOf("~", "`", "·", "Ñ", "Ń"),
     "M" to arrayOf("\\", "|"),
@@ -124,7 +124,7 @@ val PopupPreset: Map<String, Array<String>> = hashMapOf(
     "1" to arrayOf("¹", "½", "⅓", "¼", "⅕", "⅙", "⅐", "⅛", "⅑", "⅒"),
     "2" to arrayOf("²", "⅖", "⅔"),
     "3" to arrayOf("³", "⅗", "¾", "⅜"),
-    "4" to arrayOf("⁴", "⅘", "⅝", "⅚"),
+    "4" to arrayOf("⁴", "⅘"),
     "5" to arrayOf("⁵", "⅝", "⅚"),
     "6" to arrayOf("⁶"),
     "7" to arrayOf("⁷", "⅞"),
