@@ -163,6 +163,12 @@ class ClipboardWindow : InputWindow.ExtendedInputWindow<ClipboardWindow>() {
             enableUi.enableButton.setOnClickListener {
                 clipboardEnabledPref.setValue(true)
             }
+            backspaceButton.setOnClickListener {
+                service.handleBackspaceKey()
+            }
+            enterButton.setOnClickListener {
+                service.handleReturnKey()
+            }
             deleteAllButton.setOnClickListener {
                 service.lifecycleScope.launch {
                     promptDeleteAll(ClipboardManager.haveUnpinned())

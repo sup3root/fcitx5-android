@@ -297,6 +297,7 @@
     <string name="expand_toolbar">展开工具栏</string>
     <string name="back_to_keyboard">返回键盘</string>
     <string name="backspace">退格</string>
+    <string name="enter">回车</string>
     <string name="move_cursor_up">向上移动光标</string>
     <string name="move_cursor_right">向右移动光标</string>
     <string name="move_cursor_down">向下移动光标</string>

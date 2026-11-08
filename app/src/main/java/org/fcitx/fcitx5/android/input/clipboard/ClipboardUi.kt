@@ -53,16 +53,29 @@ class ClipboardUi(override val ctx: Context, private val theme: Theme) : Ui {
         add(viewAnimator, defaultLParams(matchParent, matchParent))
     }
 
+    val backspaceButton = ToolButton(ctx, R.drawable.ic_baseline_backspace_24, theme).apply {
+        contentDescription = ctx.getString(R.string.backspace)
+    }
+
+    val enterButton = ToolButton(ctx, R.drawable.ic_baseline_keyboard_return_24, theme).apply {
+        contentDescription = ctx.getString(R.string.enter)
+    }
+
     val deleteAllButton = ToolButton(ctx, R.drawable.ic_baseline_delete_sweep_24, theme).apply {
         contentDescription = ctx.getString(R.string.delete_all)
     }
 
     val extension = horizontalLayout {
+        add(backspaceButton, lParams(dp(40), dp(40)))
+        add(enterButton, lParams(dp(40), dp(40)))
         add(deleteAllButton, lParams(dp(40), dp(40)))
     }
 
-    private fun setDeleteButtonShown(enabled: Boolean) {
-        deleteAllButton.visibility = if (enabled) View.VISIBLE else View.INVISIBLE
+    private fun setToolbarButtonsShown(enabled: Boolean) {
+        val visibility = if (enabled) View.VISIBLE else View.INVISIBLE
+        backspaceButton.visibility = visibility
+        enterButton.visibility = visibility
+        deleteAllButton.visibility = visibility
     }
 
     fun switchUiByState(state: ClipboardStateMachine.State) {
@@ -72,15 +85,15 @@ class ClipboardUi(override val ctx: Context, private val theme: Theme) : Ui {
         when (state) {
             ClipboardStateMachine.State.Normal -> {
                 viewAnimator.displayedChild = 0
-                setDeleteButtonShown(true)
+                setToolbarButtonsShown(true)
             }
             ClipboardStateMachine.State.AddMore -> {
                 viewAnimator.displayedChild = 1
-                setDeleteButtonShown(false)
+                setToolbarButtonsShown(false)
             }
             ClipboardStateMachine.State.EnableListening -> {
                 viewAnimator.displayedChild = 2
-                setDeleteButtonShown(false)
+                setToolbarButtonsShown(false)
             }
         }
     }

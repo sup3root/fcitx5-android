@@ -297,6 +297,7 @@
     <string name="expand_toolbar">Expand toolbar</string>
     <string name="back_to_keyboard">Back to keyboard</string>
     <string name="backspace">Backspace</string>
+    <string name="enter">Enter</string>
     <string name="move_cursor_up">Move cursor up</string>
     <string name="move_cursor_right">Move cursor right</string>
     <string name="move_cursor_down">Move cursor down</string>
