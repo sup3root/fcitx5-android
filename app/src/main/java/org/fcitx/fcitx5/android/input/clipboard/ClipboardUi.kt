@@ -61,11 +61,26 @@ class ClipboardUi(override val ctx: Context, private val theme: Theme) : Ui {
         contentDescription = ctx.getString(R.string.enter)
     }
 
+    val homeButton = ToolButton(ctx, R.drawable.ic_baseline_first_page_24, theme).apply {
+        contentDescription = ctx.getString(R.string.move_cursor_to_start)
+    }
+
+    val endButton = ToolButton(ctx, R.drawable.ic_baseline_last_page_24, theme).apply {
+        contentDescription = ctx.getString(R.string.move_cursor_to_end)
+    }
+
+    val selectAllButton = ToolButton(ctx, R.drawable.ic_baseline_select_all_24, theme).apply {
+        contentDescription = ctx.getString(android.R.string.selectAll)
+    }
+
     val deleteAllButton = ToolButton(ctx, R.drawable.ic_baseline_delete_sweep_24, theme).apply {
         contentDescription = ctx.getString(R.string.delete_all)
     }
 
     val extension = horizontalLayout {
+        add(homeButton, lParams(dp(40), dp(40)))
+        add(endButton, lParams(dp(40), dp(40)))
+        add(selectAllButton, lParams(dp(40), dp(40)))
         add(backspaceButton, lParams(dp(40), dp(40)))
         add(enterButton, lParams(dp(40), dp(40)))
         add(deleteAllButton, lParams(dp(40), dp(40)))

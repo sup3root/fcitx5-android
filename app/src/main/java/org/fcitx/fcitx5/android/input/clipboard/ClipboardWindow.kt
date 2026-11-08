@@ -163,6 +163,15 @@ class ClipboardWindow : InputWindow.ExtendedInputWindow<ClipboardWindow>() {
             enableUi.enableButton.setOnClickListener {
                 clipboardEnabledPref.setValue(true)
             }
+            homeButton.setOnClickListener {
+                service.sendCombinationKeyEvents(android.view.KeyEvent.KEYCODE_MOVE_HOME)
+            }
+            endButton.setOnClickListener {
+                service.sendCombinationKeyEvents(android.view.KeyEvent.KEYCODE_MOVE_END)
+            }
+            selectAllButton.setOnClickListener {
+                service.currentInputConnection?.performContextMenuAction(android.R.id.selectAll)
+            }
             backspaceButton.setOnClickListener {
                 service.handleBackspaceKey()
             }
